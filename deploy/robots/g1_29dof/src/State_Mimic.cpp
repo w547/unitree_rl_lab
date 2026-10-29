@@ -188,6 +188,18 @@ void State_Mimic::enter()
         motion->reset(env->robot->data, time_range_[0]);
         env->reset();
 
+        // 诊断：进入瞬间的偏航对齐情况（帧 0 与 time_start 的参考偏航是否一致）
+        {
+            auto yaw_deg = [](const Eigen::Matrix3f &m) {
+                return std::atan2(m(1, 0), m(0, 0)) * 57.2958f;
+            };
+            auto start_yaw = isaaclab::yawQuaternion(motion->root_quaternion()).toRotationMatrix();
+            const auto q = env->robot->data.root_quat_w;
+            spdlog::info("[diag] enter mimic t0={:.2f}s robot_quat=({:.3f},{:.3f},{:.3f},{:.3f}) |q|={:.3f} yaw: frame0={:.1f} start={:.1f} robot={:.1f}",
+                         time_range_[0], q.x(), q.y(), q.z(), q.w(), q.norm(),
+                         yaw_deg(ref_yaw), yaw_deg(start_yaw), yaw_deg(robot_yaw));
+        }
+
         while (policy_thread_running)
         {
             env->robot->update();
